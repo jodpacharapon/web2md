@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Web2MD</title>
+    <link rel="stylesheet" href="popup.css" />
+  </head>
+  <body>
+    <header class="top">
+      <h1>Web2MD</h1>
+      <span id="mode" class="badge" hidden></span>
+    </header>
+
+    <textarea id="output" spellcheck="false" placeholder="Converting…"></textarea>
+
+    <div class="options">
+      <label><input type="checkbox" id="opt-header" checked /> Add title &amp; source URL</label>
+      <label><input type="checkbox" id="opt-cleanup" checked /> Remove menus, sidebars &amp; footers</label>
+    </div>
+
+    <footer class="bottom">
+      <span id="stats" class="stats"></span>
+      <button id="copy" type="button" disabled>Copy Markdown</button>
+    </footer>
+
+    <p id="message" class="message" role="status" hidden></p>
+
+    <script type="module" src="popup.js"></script>
+  </body>
+</html>

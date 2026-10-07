@@ -1,0 +1,23 @@
+{
+  "manifest_version": 3,
+  "name": "Web2MD – Copy page as Markdown",
+  "version": "0.1.0",
+  "description": "Convert the current page or your selection to clean Markdown and copy it, ready to paste into an AI chat.",
+  "action": {
+    "default_title": "Copy page as Markdown",
+    "default_popup": "popup/popup.html",
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "32": "icons/icon32.png",
+      "48": "icons/icon48.png",
+      "128": "icons/icon128.png"
+    }
+  },
+  "icons": {
+    "16": "icons/icon16.png",
+    "32": "icons/icon32.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  },
+  "permissions": ["activeTab", "scripting", "clipboardWrite"]
+}
