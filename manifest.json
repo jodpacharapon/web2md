@@ -1,10 +1,13 @@
 {
   "manifest_version": 3,
   "name": "Web2MD – Copy page as Markdown",
-  "version": "0.1.0",
+  "short_name": "Web2MD",
+  "version": "0.2.0",
   "description": "Convert the current page or your selection to clean Markdown and copy it, ready to paste into an AI chat.",
+  "homepage_url": "https://github.com/jodpacharapon/web2md",
+  "minimum_chrome_version": "105",
   "action": {
-    "default_title": "Copy page as Markdown",
+    "default_title": "Copy page as Markdown (Alt+Shift+M)",
     "default_popup": "popup/popup.html",
     "default_icon": {
       "16": "icons/icon16.png",
@@ -13,11 +16,26 @@
       "128": "icons/icon128.png"
     }
   },
+  "commands": {
+    "_execute_action": {
+      "suggested_key": {
+        "default": "Alt+Shift+M"
+      },
+      "description": "Open Web2MD"
+    }
+  },
   "icons": {
     "16": "icons/icon16.png",
     "32": "icons/icon32.png",
     "48": "icons/icon48.png",
     "128": "icons/icon128.png"
   },
-  "permissions": ["activeTab", "scripting", "clipboardWrite"]
+  "permissions": [
+    "activeTab",
+    "scripting",
+    "storage"
+  ],
+  "content_security_policy": {
+    "extension_pages": "script-src 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'"
+  }
 }

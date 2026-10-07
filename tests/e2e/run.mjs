@@ -48,9 +48,14 @@ const context = await chromium.launchPersistentContext(userDataDir, {
   channel: 'chromium',
   headless: true,
   viewport: { width: 1100, height: 760 },
+  // Without a UTF-8 locale, Chromium on Linux replaces non-ASCII download names
+  // (e.g. Thai titles) with "download". Real desktops are UTF-8 already.
+  env: { ...process.env, LANG: 'C.UTF-8', LC_ALL: 'C.UTF-8' },
   args: [`--disable-extensions-except=${extDir}`, `--load-extension=${extDir}`],
 });
-await context.grantPermissions(['clipboard-read', 'clipboard-write']);
+// Only *reading* is granted (so the test can check the result). Writing must work
+// on its own, like it does for users, without the clipboardWrite permission.
+await context.grantPermissions(['clipboard-read']);
 
 // Find the extension id from chrome://extensions-internals is awkward; use the
 // popup URL pattern instead: open any extension page via the management API.
@@ -106,8 +111,14 @@ const md = await popup.inputValue('#output');
 fs.writeFileSync(path.join(shots, 'whole-page.md'), md);
 await popup.screenshot({ path: path.join(shots, '2-popup-whole-page.png') });
 
-await check('whole page: badge says "Whole page"', async () =>
-  assert.equal(await popup.textContent('#mode'), 'Whole page'));
+await check('whole page: badge says "Main content" (Readability)', async () =>
+  assert.equal(await popup.textContent('#mode'), 'Main content'));
+await check('whole page: hidden prompt-injection text is skipped', async () => {
+  assert.ok(!/INJECTION|IGNORE PREVIOUS/.test(md), 'hidden text leaked into the Markdown');
+  assert.match(await popup.textContent('#notice'), /Skipped \d+ hidden element/);
+});
+await check('page itself is left untouched (no marker attributes)', async () =>
+  assert.equal(await page.evaluate(() => document.querySelectorAll('[data-web2md-hidden]').length), 0));
 await check('whole page: Thai heading kept', () => assert.match(md, /^# วิธีใช้ Markdown กับ AI$/m));
 await check('whole page: title first, then source URL', () =>
   assert.ok(md.startsWith(`# วิธีใช้ Markdown กับ AI\n\nSource: ${base}/blog.html\n\n`), md.slice(0, 120)));
@@ -143,12 +154,39 @@ await popup.screenshot({ path: path.join(shots, '3-popup-copied.png') });
 
 // --- Scenario 3: title/URL header toggle ------------------------------------
 await check('unchecking "Add title & source URL" removes the header', async () => {
-  await popup.uncheck('#opt-header');
+  await popup.uncheck('#opt-includeHeader');
   const v = await popup.inputValue('#output');
   assert.ok(!v.includes('Source:'));
-  await popup.check('#opt-header');
+  await popup.check('#opt-includeHeader');
+});
+await check('unchecking "Keep images" removes images', async () => {
+  await popup.uncheck('#opt-includeImages');
+  assert.ok(!(await popup.inputValue('#output')).includes('!['));
 });
 await popup.close();
+
+// --- Scenario 3b: settings are remembered, Enter copies, Download works -------
+const popup2 = await openPopupFor(page);
+await check('settings are remembered between popup openings', async () => {
+  assert.equal(await popup2.isChecked('#opt-includeImages'), false);
+  assert.ok(!(await popup2.inputValue('#output')).includes('!['));
+  await popup2.check('#opt-includeImages');
+});
+await check('pressing Enter right after opening copies (Copy button has focus)', async () => {
+  await popup2.evaluate(() => navigator.clipboard.writeText(''));
+  await popup2.keyboard.press('Enter');
+  await popup2.waitForSelector('#message:not([hidden])');
+  assert.equal(await popup2.evaluate(() => navigator.clipboard.readText()), await popup2.inputValue('#output'));
+});
+await check('Download .md saves a file named after the page', async () => {
+  const [dl] = await Promise.all([popup2.waitForEvent('download'), popup2.click('#download')]);
+  const name = dl.suggestedFilename();
+  const saved = path.join(shots, name);
+  await dl.saveAs(saved);
+  assert.match(name, /^วิธีใช้ Markdown กับ AI.*\.md$/);
+  assert.equal(fs.readFileSync(saved, 'utf8'), await popup2.inputValue('#output'));
+});
+await popup2.close();
 
 // --- Scenario 4: selection only ---------------------------------------------
 await page.evaluate(() => {

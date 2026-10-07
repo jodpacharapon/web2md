@@ -1,15 +1,17 @@
 {
   "name": "web2md",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Chrome extension that converts the current page (or selection) to Markdown and copies it for AI.",
   "private": true,
   "type": "module",
   "scripts": {
-    "vendor": "cp node_modules/turndown/lib/turndown.browser.es.js lib/ && cp node_modules/turndown-plugin-gfm/lib/turndown-plugin-gfm.browser.es.js lib/",
+    "vendor": "node scripts/vendor.mjs",
     "test": "node --test tests/*.test.mjs",
-    "test:e2e": "node tests/e2e/run.mjs"
+    "test:e2e": "node tests/e2e/run.mjs",
+    "build": "node scripts/build.mjs"
   },
   "devDependencies": {
+    "@mozilla/readability": "^0.6.0",
     "jsdom": "^26.1.0",
     "playwright": "^1.56.0",
     "turndown": "^7.2.4",

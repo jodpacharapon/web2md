@@ -12,19 +12,24 @@
       <span id="mode" class="badge" hidden></span>
     </header>
 
-    <textarea id="output" spellcheck="false" placeholder="Converting…"></textarea>
+    <textarea id="output" spellcheck="false" placeholder="Converting…" aria-label="Markdown output"></textarea>
 
     <div class="options">
-      <label><input type="checkbox" id="opt-header" checked /> Add title &amp; source URL</label>
-      <label><input type="checkbox" id="opt-cleanup" checked /> Remove menus, sidebars &amp; footers</label>
+      <label><input type="checkbox" id="opt-includeHeader" /> Add title &amp; source URL</label>
+      <label><input type="checkbox" id="opt-cleanup" /> Main content only (remove menus, ads, comments)</label>
+      <label><input type="checkbox" id="opt-includeImages" /> Keep images</label>
     </div>
 
     <footer class="bottom">
       <span id="stats" class="stats"></span>
-      <button id="copy" type="button" disabled>Copy Markdown</button>
+      <div class="actions">
+        <button id="download" type="button" class="secondary" disabled title="Save as a .md file">Download .md</button>
+        <button id="copy" type="button" disabled title="Copy (Enter)">Copy Markdown</button>
+      </div>
     </footer>
 
     <p id="message" class="message" role="status" hidden></p>
+    <p id="notice" class="notice" hidden></p>
 
     <script type="module" src="popup.js"></script>
   </body>

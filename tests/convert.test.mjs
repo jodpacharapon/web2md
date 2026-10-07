@@ -18,7 +18,7 @@ test('converts headings, emphasis, links and lists', () => {
   assert.match(md, /^# Hello/);
   assert.match(md, /\*\*bold\*\*/);
   assert.match(md, /\*italic\*/);
-  assert.match(md, /\[link\]\(https:\/\/example\.com\)/);
+  assert.match(md, /\[link\]\(https:\/\/example\.com\/\)/);
   assert.match(md, /^-\s+one$/m);
 });
 
@@ -71,11 +71,11 @@ test('does not repeat the title when content already starts with an h1', () => {
 test('drops empty anchor links but keeps image links', () => {
   const md = htmlToMarkdown(
     '<h2>Usage<a href="#usage" aria-label="Permalink"><svg></svg></a></h2><p><a href="/x"><img src="https://e.com/a.png" alt="logo"></a></p>',
-    { includeHeader: false },
+    { includeHeader: false, baseUrl: 'https://e.com/' },
   );
   assert.ok(!md.includes('[]('), md);
   assert.match(md, /^## Usage$/m);
-  assert.match(md, /\[!\[logo\]\(https:\/\/e\.com\/a\.png\)\]\(\/x\)/);
+  assert.match(md, /\[!\[logo\]\(https:\/\/e\.com\/a\.png\)\]\(https:\/\/e\.com\/x\)/);
 });
 
 test('returns an empty string for empty input', () => {
@@ -85,4 +85,72 @@ test('returns an empty string for empty input', () => {
 test('strips script and style content', () => {
   const md = htmlToMarkdown('<style>p{color:red}</style><script>alert(1)</script><p>Visible</p>', { includeHeader: false });
   assert.equal(md, 'Visible\n');
+});
+
+const { safeUrl, estimateTokens, fileNameFor } = await import('../src/convert.js');
+
+test('relative links and images are resolved against the page', () => {
+  const md = htmlToMarkdown('<p><a href="../about">About</a> <img src="img/a.png" alt="A"></p>', {
+    includeHeader: false,
+    baseUrl: 'https://example.com/blog/post',
+  });
+  assert.equal(md, '[About](https://example.com/about) ![A](https://example.com/blog/img/a.png)\n');
+});
+
+test('unsafe link schemes become plain text', () => {
+  const md = htmlToMarkdown(
+    '<p><a href="javascript:alert(1)">click</a> <a href="JaVaScRiPt:evil()">x</a> <a href="data:text/html,hi">d</a> <a href="vbscript:x">v</a></p>',
+    { includeHeader: false, baseUrl: 'https://example.com/' },
+  );
+  assert.equal(md, 'click x d v\n');
+});
+
+test('in-page #anchors become plain text', () => {
+  assert.equal(htmlToMarkdown('<p><a href="#intro">Intro</a></p>', { includeHeader: false }), 'Intro\n');
+});
+
+test('data: images and images without a usable src are dropped; lazy data-src is used', () => {
+  const md = htmlToMarkdown(
+    '<p><img src="data:image/png;base64,AAAA" alt="tiny"><img alt="nosrc"><img src="data:image/gif;base64,R0" data-src="/real.jpg" alt="lazy"></p>',
+    { includeHeader: false, baseUrl: 'https://example.com/' },
+  );
+  assert.equal(md, '![lazy](https://example.com/real.jpg)\n');
+});
+
+test('includeImages: false removes images, and links that only wrapped an image', () => {
+  const md = htmlToMarkdown('<p>Text <img src="/a.png" alt="a"> <a href="/x"><img src="/b.png"></a></p>', {
+    includeHeader: false,
+    includeImages: false,
+    baseUrl: 'https://example.com/',
+  });
+  assert.equal(md, 'Text\n');
+});
+
+test('URLs with parentheses and spaces do not break Markdown', () => {
+  assert.equal(safeUrl('/wiki/Foo_(bar) baz', 'https://example.com/'), 'https://example.com/wiki/Foo_%28bar%29%20baz');
+});
+
+test('a link whose text is its URL becomes <url>', () => {
+  const md = htmlToMarkdown('<p><a href="https://example.com/x">https://example.com/x</a></p>', { includeHeader: false });
+  assert.equal(md, '<https://example.com/x>\n');
+});
+
+test('HTML in the page is never executed by the converter', async () => {
+  globalThis.__pwned = false;
+  htmlToMarkdown('<img src="x" onerror="globalThis.__pwned = true"><script>globalThis.__pwned = true</script>', {
+    includeHeader: false,
+  });
+  await new Promise((r) => setTimeout(r, 50));
+  assert.equal(globalThis.__pwned, false);
+});
+
+test('estimateTokens counts Thai more heavily than English', () => {
+  assert.equal(estimateTokens('abcdefgh'), 2);
+  assert.ok(estimateTokens('ภาษาไทยภาษาไทย') > estimateTokens('abcdefghijklmn'));
+});
+
+test('fileNameFor keeps Thai, strips characters Windows does not allow', () => {
+  assert.equal(fileNameFor('[ลงทุนแมน] จ่าย 1,000: รับ 800?'), '[ลงทุนแมน] จ่าย 1,000 รับ 800.md');
+  assert.equal(fileNameFor(''), 'page.md');
+  assert.equal(fileNameFor('a/b\\c'), 'a b c.md');
 });
