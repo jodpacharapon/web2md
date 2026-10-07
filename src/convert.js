@@ -44,6 +44,26 @@ function createService() {
 }
 
 /**
+ * Remove the odd spacing web pages leave behind, without touching code:
+ * - non-breaking spaces (&nbsp;, common on Thai sites) become normal spaces
+ * - runs of spaces inside a line collapse to one (list indentation is kept)
+ * - trailing spaces go (Turndown writes <br> as "two spaces + newline")
+ * - 3+ newlines collapse to one blank line
+ */
+function tidyWhitespace(md) {
+  // Odd-indexed parts are fenced code blocks or `inline code`; leave them as-is.
+  const parts = md.split(/(```[\s\S]*?```|`[^`\n]*`)/);
+  for (let i = 0; i < parts.length; i += 2) {
+    parts[i] = parts[i]
+      .replace(/ /g, ' ')
+      .replace(/(\S) {2,}/g, '$1 ')
+      // Only strip spaces before a newline: a segment can end right before inline code.
+      .replace(/[ \t]+(?=\n)/g, '');
+  }
+  return parts.join('').replace(/\n{3,}/g, '\n\n').trim();
+}
+
+/**
  * Convert an HTML string to Markdown.
  *
  * @param {string} html
@@ -54,8 +74,7 @@ export function htmlToMarkdown(html, opts = {}) {
   const { title = '', url = '', includeHeader = true } = opts;
   let md = createService().turndown(html || '');
 
-  // Collapse runs of blank lines left over from stripped markup.
-  md = md.replace(/\n{3,}/g, '\n\n').trim();
+  md = tidyWhitespace(md);
 
   if (includeHeader && (title || url)) {
     const source = url ? `Source: ${url}` : '';

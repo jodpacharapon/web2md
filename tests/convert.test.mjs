@@ -30,6 +30,19 @@ test('lists use a single space after the marker, including nested and numbered l
   assert.equal(md, '- one\n  - nested\n- two\n\n3. three\n4. four\n');
 });
 
+test('cleans up &nbsp;, double spaces and <br> trailing spaces, but not code', () => {
+  const md = htmlToMarkdown(
+    '<div>เสนอว่า&nbsp;&nbsp;ขอให้ซื้อ<br>ราคา 1,000 บาท<br><br>โอนให้&nbsp; 800 บาท</div>' +
+      '<p>ย่อหน้า&nbsp;&nbsp;&nbsp;ถัดไป <code>a  b</code></p><pre><code>keep    this</code></pre>' +
+      '<ul><li>one<ul><li>nested</li></ul></li></ul>',
+    { includeHeader: false },
+  );
+  assert.equal(
+    md,
+    'เสนอว่า ขอให้ซื้อ\nราคา 1,000 บาท\n\nโอนให้ 800 บาท\n\nย่อหน้า ถัดไป `a b`\n\n```\nkeep    this\n```\n\n- one\n  - nested\n',
+  );
+});
+
 test('converts fenced code blocks', () => {
   const md = htmlToMarkdown('<pre><code>const a = 1;\nconsole.log(a);</code></pre>', { includeHeader: false });
   assert.match(md, /```\nconst a = 1;\nconsole\.log\(a\);\n```/);
