@@ -22,6 +22,14 @@ test('converts headings, emphasis, links and lists', () => {
   assert.match(md, /^-\s+one$/m);
 });
 
+test('lists use a single space after the marker, including nested and numbered lists', () => {
+  const md = htmlToMarkdown(
+    '<ul><li>one<ul><li>nested</li></ul></li><li>two</li></ul><ol start="3"><li>three</li><li>four</li></ol>',
+    { includeHeader: false },
+  );
+  assert.equal(md, '- one\n  - nested\n- two\n\n3. three\n4. four\n');
+});
+
 test('converts fenced code blocks', () => {
   const md = htmlToMarkdown('<pre><code>const a = 1;\nconsole.log(a);</code></pre>', { includeHeader: false });
   assert.match(md, /```\nconst a = 1;\nconsole\.log\(a\);\n```/);
@@ -44,8 +52,17 @@ test('adds title and source URL header', () => {
 
 test('does not repeat the title when content already starts with an h1', () => {
   const md = htmlToMarkdown('<h1>Real Title</h1><p>Body</p>', { title: 'Real Title | Site', url: 'https://example.com' });
-  assert.ok(md.startsWith('Source: https://example.com'));
-  assert.equal(md.match(/^# /gm).length, 1);
+  assert.equal(md, '# Real Title\n\nSource: https://example.com\n\nBody\n');
+});
+
+test('drops empty anchor links but keeps image links', () => {
+  const md = htmlToMarkdown(
+    '<h2>Usage<a href="#usage" aria-label="Permalink"><svg></svg></a></h2><p><a href="/x"><img src="https://e.com/a.png" alt="logo"></a></p>',
+    { includeHeader: false },
+  );
+  assert.ok(!md.includes('[]('), md);
+  assert.match(md, /^## Usage$/m);
+  assert.match(md, /\[!\[logo\]\(https:\/\/e\.com\/a\.png\)\]\(\/x\)/);
 });
 
 test('returns an empty string for empty input', () => {

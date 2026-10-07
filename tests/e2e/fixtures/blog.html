@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="th">
+  <head>
+    <meta charset="utf-8" />
+    <title>วิธีใช้ Markdown กับ AI | DevBlog</title>
+    <style>
+      body { font-family: sans-serif; margin: 0; }
+      header.site, nav, footer.site, aside { background: #eee; padding: 12px; }
+      .layout { display: flex; gap: 16px; padding: 16px; }
+      article { flex: 1; }
+      aside { width: 220px; }
+      .cookie { position: fixed; bottom: 0; left: 0; right: 0; background: #333; color: #fff; padding: 8px; }
+    </style>
+  </head>
+  <body>
+    <header class="site"><strong>DevBlog</strong> — SITE HEADER</header>
+    <nav><a href="/">Home</a> · <a href="/tags">Tags</a> · <a href="/about">About</a> NAV MENU</nav>
+    <div class="layout">
+      <article>
+        <h1>วิธีใช้ Markdown กับ AI</h1>
+        <p>เขียนโดย <a href="/authors/tae">Tae</a> · 7 ต.ค. 2026</p>
+        <p>Markdown ช่วยให้ AI <strong>เข้าใจโครงสร้าง</strong> ของเนื้อหาได้ดีกว่าข้อความธรรมดา และยัง<em>ประหยัด token</em> ด้วย</p>
+        <h2>ข้อดี</h2>
+        <ul>
+          <li>หัวข้อชัดเจน</li>
+          <li>ตารางและโค้ดไม่เพี้ยน</li>
+          <li>ลิงก์ยังกดได้ เช่น <a href="docs/guide.html">คู่มือ</a></li>
+        </ul>
+        <h2>ตัวอย่างโค้ด</h2>
+        <pre><code class="language-js">const md = htmlToMarkdown(html);
+navigator.clipboard.writeText(md);</code></pre>
+        <h2>เปรียบเทียบรูปแบบ</h2>
+        <table>
+          <thead><tr><th>รูปแบบ</th><th>Token</th><th>อ่านง่าย</th></tr></thead>
+          <tbody>
+            <tr><td>HTML</td><td>3,200</td><td>ไม่</td></tr>
+            <tr><td>Markdown</td><td>900</td><td>ใช่</td></tr>
+          </tbody>
+        </table>
+        <blockquote><p>ส่ง Markdown ให้ AI ดีกว่าแปะ HTML ทั้งหน้า</p></blockquote>
+        <p><img src="img/diagram.png" alt="แผนภาพ" /></p>
+        <script>window.trackingPixel = 'TRACKING SCRIPT';</script>
+      </article>
+      <aside><h3>Related posts</h3><p>SIDEBAR AD</p></aside>
+    </div>
+    <footer class="site">© 2026 DevBlog — SITE FOOTER</footer>
+    <div class="cookie" aria-hidden="true">COOKIE BANNER</div>
+  </body>
+</html>

@@ -6,10 +6,12 @@
   "type": "module",
   "scripts": {
     "vendor": "cp node_modules/turndown/lib/turndown.browser.es.js lib/ && cp node_modules/turndown-plugin-gfm/lib/turndown-plugin-gfm.browser.es.js lib/",
-    "test": "node --test tests/*.test.mjs"
+    "test": "node --test tests/*.test.mjs",
+    "test:e2e": "node tests/e2e/run.mjs"
   },
   "devDependencies": {
     "jsdom": "^26.1.0",
+    "playwright": "^1.56.0",
     "turndown": "^7.2.4",
     "turndown-plugin-gfm": "^1.0.2"
   }

@@ -10,7 +10,7 @@ A Chrome extension that turns the page you're reading (or just the text you've s
 - Previews the Markdown in the popup so you can edit it before copying
 - Removes menus, sidebars, footers and scripts so the result is mostly content
 - Keeps headings, lists, links, code blocks and tables (GitHub-flavoured Markdown)
-- Turns relative links and image URLs into absolute ones
+- Turns relative links and image URLs into absolute ones, and drops empty heading-anchor links
 - Optional title + source URL header for extra context
 - Shows a rough character / token estimate
 - Runs entirely in your browser: no servers, no tracking, nothing leaves your machine
@@ -44,9 +44,21 @@ tests/             Unit tests (npm test)
 
 ## Tests
 
+Unit tests (conversion and extraction, runs in Node with jsdom):
+
 ```
 npm test
 ```
+
+End-to-end test: loads the real extension into Chromium, opens test pages, checks the popup output, the copy button, selection mode, the cleanup option and the error on `chrome://` pages. Screenshots and the Markdown it produced are saved to `tests/e2e/screenshots/`. You can pass real URLs to try too:
+
+```
+npx playwright install chromium   # first time only
+npm run test:e2e
+npm run test:e2e -- https://github.com/mixmark-io/turndown
+```
+
+Automation can't click the toolbar icon, so the e2e test loads a temporary copy of the extension with host permissions added. The shipped extension only uses `activeTab`.
 
 ## Updating bundled libraries
 

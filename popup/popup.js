@@ -16,6 +16,8 @@ function showMessage(text, isError = false) {
   message.textContent = text;
   message.classList.toggle('error', isError);
   message.hidden = !text;
+  // Don't leave "Converting…" showing next to an error.
+  output.placeholder = isError ? '' : 'Converting…';
 }
 
 function render() {
@@ -36,7 +38,12 @@ async function extract() {
   copyButton.disabled = true;
   output.value = '';
 
-  const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+  // `?tabId=123` lets the popup be opened as a normal page for a given tab
+  // (used by the end-to-end tests and handy for debugging).
+  const forcedTabId = Number(new URLSearchParams(location.search).get('tabId'));
+  const tab = forcedTabId
+    ? await chrome.tabs.get(forcedTabId)
+    : (await chrome.tabs.query({ active: true, currentWindow: true }))[0];
   if (!tab || tab.id === undefined) {
     showMessage('Could not find the active tab.', true);
     return;
