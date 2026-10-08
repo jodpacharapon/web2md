@@ -93,3 +93,13 @@ test('works without Readability loaded', () => {
   assert.equal(r.mode, 'page');
   assert.ok(r.html.includes('Body'));
 });
+
+test('selection mode also prefers the visible <h1> over "Title | Site name"', () => {
+  const dom = load('<!doctype html><title>Real Title | My Site</title><body><h1>Real Title</h1><p id="p">Body</p></body>');
+  const range = dom.window.document.createRange();
+  range.selectNodeContents(dom.window.document.getElementById('p'));
+  dom.window.getSelection().addRange(range);
+  const r = extractPage({ cleanup: true });
+  assert.equal(r.mode, 'selection');
+  assert.equal(r.title, 'Real Title');
+});

@@ -28,10 +28,8 @@ Priorities for getting Web2MD from a working prototype to a public Chrome Web St
 | Item | Owner | Notes |
 | --- | --- | --- |
 | Try it on the sites you actually use (Blockdit, Pantip, news, docs) | You | Send any page where the output is poor; the extractor can be tuned |
-| Store listing assets | You (+ Claude can draft) | 1280×800 screenshots, 440×280 promo tile, description in Thai and English |
-| Host the privacy policy at a public URL | You | `PRIVACY.md` is ready; GitHub's file URL works once the repo is public |
-| Choose a license | You | MIT is the usual choice for small open-source tools |
-| Single-purpose description for the Store review | Claude can draft | "Converts the current web page to Markdown for pasting into AI tools" |
+| Store listing | You | Text ready in `STORE_LISTING.md`; images from `npm run store-assets` |
+| Make the repo public and set `main` as default branch | You | Then the privacy policy URL in `STORE_LISTING.md` works |
 
 ## P1 – first public versions
 

@@ -50,8 +50,15 @@ export function extractPage(options = {}) {
   try {
     if (document.body) tagHidden();
 
+    // The page title often ends in " | Site name". Prefer the visible <h1>
+    // when the page title contains it (true for most articles).
+    const pageTitle = (document.title || '').trim();
+    const h1 = document.querySelector(`h1:not([${HIDDEN_ATTR}])`);
+    const h1Text = h1 ? h1.textContent.replace(/\s+/g, ' ').trim() : '';
+    const bestTitle = h1Text && pageTitle.includes(h1Text) ? h1Text : pageTitle;
+
     const result = {
-      title: document.title || '',
+      title: bestTitle,
       url: location.href,
       baseUrl: document.baseURI,
       mode: 'page',
@@ -82,12 +89,7 @@ export function extractPage(options = {}) {
         const text = article && article.textContent ? article.textContent.trim() : '';
         if (text.length >= 200) {
           result.mode = 'article';
-          // Readability drops the article's own <h1> and may keep " | Site name" in
-          // the title. Prefer the visible <h1> when the page title contains it.
-          const h1 = document.querySelector(`h1:not([${HIDDEN_ATTR}])`);
-          const h1Text = h1 ? h1.textContent.replace(/\s+/g, ' ').trim() : '';
-          const pageTitle = document.title || '';
-          result.title = (h1Text && pageTitle.includes(h1Text) ? h1Text : article.title || pageTitle).trim();
+          if (bestTitle === pageTitle && article.title) result.title = article.title.trim();
           result.html = article.content;
           return result;
         }

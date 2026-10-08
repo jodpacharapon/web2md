@@ -109,7 +109,10 @@ export function tidyWhitespace(md) {
       .replace(/ /g, ' ')
       .replace(/(\S) {2,}/g, '$1 ')
       // Only strip spaces before a newline: a segment can end right before inline code.
-      .replace(/[ \t]+(?=\n)/g, '');
+      .replace(/[ \t]+(?=\n)/g, '')
+      // Turndown escapes "1." so it isn't read as a list, but after "## " it
+      // can't be a list: "## 1\. Intro" -> "## 1. Intro".
+      .replace(/^(#{1,6} +\d+)\\\./gm, '$1.');
   }
   return parts.join('').replace(/\n{3,}/g, '\n\n').trim();
 }

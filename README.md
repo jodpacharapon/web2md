@@ -59,6 +59,7 @@ npx playwright install chromium   # first time only
 npm run test:e2e                  # real extension in Chromium; screenshots in tests/e2e/screenshots/
 npm run test:e2e -- https://example.com/some-article   # also try real pages
 npm run build                     # release checks + dist/web2md-<version>.zip
+npm run store-assets              # Store screenshots + promo tile in store-assets/
 ```
 
 The e2e test can't click the toolbar icon, so it loads a temporary copy with host permissions added. The shipped extension only uses `activeTab`.
@@ -74,7 +75,7 @@ npm run vendor
 
 1. Bump `version` in `manifest.json` (and `package.json`)
 2. Run the checks in [SECURITY.md](SECURITY.md#before-every-release), then `npm run build`
-3. Upload `dist/web2md-<version>.zip` in the Chrome Web Store Developer Dashboard, fill in the listing, privacy practices (link to `PRIVACY.md`) and screenshots, then submit for review
+3. Upload `dist/web2md-<version>.zip` in the Chrome Web Store Developer Dashboard. Copy the listing and privacy answers from [STORE_LISTING.md](STORE_LISTING.md), add the images from `npm run store-assets`, then submit for review
 
 What's next: [ROADMAP.md](ROADMAP.md).
 
@@ -84,4 +85,4 @@ Bundled: [Turndown](https://github.com/mixmark-io/turndown) (MIT), [turndown-plu
 
 ## License
 
-Not chosen yet. Add a `LICENSE` file before making the project open source.
+[MIT](LICENSE). Bundled third-party libraries keep their own licenses (see `lib/`).

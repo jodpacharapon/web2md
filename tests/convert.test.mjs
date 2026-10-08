@@ -154,3 +154,8 @@ test('fileNameFor keeps Thai, strips characters Windows does not allow', () => {
   assert.equal(fileNameFor(''), 'page.md');
   assert.equal(fileNameFor('a/b\\c'), 'a b c.md');
 });
+
+test('numbered headings are not escaped, but numbered paragraphs still are', () => {
+  const md = htmlToMarkdown('<h2>1. Send only what you need</h2><p>2. Not a list item</p>', { includeHeader: false });
+  assert.equal(md, '## 1. Send only what you need\n\n2\\. Not a list item\n');
+});
