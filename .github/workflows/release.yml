@@ -1,0 +1,38 @@
+name: Release
+
+# Push a tag like v0.3.0 to run every check and publish a GitHub Release with
+# the Chrome Web Store zip attached. The tag must match manifest.json.
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Tag matches manifest.json and package.json
+        run: |
+          version="$(node -p "require('./manifest.json').version")"
+          test "v$version" = "$GITHUB_REF_NAME" || { echo "Tag $GITHUB_REF_NAME does not match manifest.json version $version"; exit 1; }
+          test "$(node -p "require('./package.json').version")" = "$version" || { echo "package.json version differs"; exit 1; }
+      - run: npm ci
+      - run: npm test
+      - run: npm audit --audit-level=high
+      - run: npx playwright install --with-deps chromium
+      - run: npm run test:e2e
+      - run: npm run build
+      - name: Release notes from CHANGELOG.md
+        run: awk -v v="## ${GITHUB_REF_NAME#v}" '$0==v{on=1;next} /^## /{on=0} on' CHANGELOG.md > notes.md
+      - name: Publish GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release create "$GITHUB_REF_NAME" dist/*.zip --title "Web2MD $GITHUB_REF_NAME" --notes-file notes.md

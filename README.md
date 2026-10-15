@@ -82,9 +82,10 @@ npm run vendor
 
 ## Publishing to the Chrome Web Store
 
-1. Bump `version` in `manifest.json` (and `package.json`)
+1. Bump `version` in `manifest.json` (and `package.json`) and add a section to [CHANGELOG.md](CHANGELOG.md)
 2. Run the checks in [SECURITY.md](SECURITY.md#before-every-release), then `npm run build`
-3. Upload `dist/web2md-<version>.zip` in the Chrome Web Store Developer Dashboard. Copy the listing and privacy answers from [STORE_LISTING.md](STORE_LISTING.md), add the images from `npm run store-assets`, then submit for review
+3. Optional: push a tag `v<version>` (e.g. `git tag v0.3.0 && git push origin v0.3.0`). GitHub Actions re-runs every check and publishes a GitHub Release with the zip attached
+4. Upload `dist/web2md-<version>.zip` (or the zip from the GitHub Release) in the Chrome Web Store Developer Dashboard. Copy the listing and privacy answers from [STORE_LISTING.md](STORE_LISTING.md), add the images from `npm run store-assets`, then submit for review
 
 What's next: [ROADMAP.md](ROADMAP.md).
 
