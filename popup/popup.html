@@ -12,19 +12,26 @@
       <span id="mode" class="badge" hidden></span>
     </header>
 
-    <textarea id="output" spellcheck="false" placeholder="Converting…" aria-label="Markdown output"></textarea>
+    <textarea
+      id="output"
+      spellcheck="false"
+      placeholder="Converting…"
+      aria-label="Markdown output"
+      data-i18n-placeholder="converting"
+      data-i18n-aria-label="outputLabel"
+    ></textarea>
 
     <div class="options">
-      <label><input type="checkbox" id="opt-includeHeader" /> Add title &amp; source URL</label>
-      <label><input type="checkbox" id="opt-cleanup" /> Main content only (remove menus, ads, comments)</label>
-      <label><input type="checkbox" id="opt-includeImages" /> Keep images</label>
+      <label><input type="checkbox" id="opt-includeHeader" /> <span data-i18n="optIncludeHeader">Add title &amp; source URL</span></label>
+      <label><input type="checkbox" id="opt-cleanup" /> <span data-i18n="optCleanup">Main content only (remove menus, ads, comments)</span></label>
+      <label><input type="checkbox" id="opt-includeImages" /> <span data-i18n="optIncludeImages">Keep images</span></label>
     </div>
 
     <footer class="bottom">
       <span id="stats" class="stats"></span>
       <div class="actions">
-        <button id="download" type="button" class="secondary" disabled title="Save as a .md file">Download .md</button>
-        <button id="copy" type="button" disabled title="Copy (Enter)">Copy Markdown</button>
+        <button id="download" type="button" class="secondary" disabled title="Save as a .md file" data-i18n="downloadButton" data-i18n-title="downloadTooltip">Download .md</button>
+        <button id="copy" type="button" disabled title="Copy (Enter)" data-i18n="copyButton" data-i18n-title="copyTooltip">Copy Markdown</button>
       </div>
     </footer>
 

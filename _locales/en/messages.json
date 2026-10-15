@@ -1,0 +1,48 @@
+{
+  "extName": { "message": "Web2MD – Copy page as Markdown" },
+  "extDescription": {
+    "message": "Convert the current page or your selection to clean Markdown and copy it, ready to paste into an AI chat."
+  },
+  "actionTitle": { "message": "Copy page as Markdown (Alt+Shift+M)" },
+  "commandOpen": { "message": "Open Web2MD" },
+  "contextMenuCopySelection": { "message": "Copy selection as Markdown" },
+
+  "modeSelection": { "message": "Selection only" },
+  "modeArticle": { "message": "Main content" },
+  "modePage": { "message": "Whole page" },
+
+  "outputLabel": { "message": "Markdown output" },
+  "converting": { "message": "Converting…" },
+  "optIncludeHeader": { "message": "Add title & source URL" },
+  "optCleanup": { "message": "Main content only (remove menus, ads, comments)" },
+  "optIncludeImages": { "message": "Keep images" },
+  "downloadButton": { "message": "Download .md" },
+  "downloadTooltip": { "message": "Save as a .md file" },
+  "copyButton": { "message": "Copy Markdown" },
+  "copyTooltip": { "message": "Copy (Enter)" },
+
+  "stats": {
+    "message": "$CHARS$ chars · ~$TOKENS$ tokens",
+    "placeholders": { "chars": { "content": "$1" }, "tokens": { "content": "$2" } }
+  },
+  "copied": { "message": "Copied! Paste it into your AI chat." },
+  "copyFailed": { "message": "Couldn't copy automatically. Press Enter to copy." },
+  "saved": {
+    "message": "Saved $FILE$",
+    "placeholders": { "file": { "content": "$1" } }
+  },
+  "skippedHidden": {
+    "message": "Skipped $COUNT$ hidden element(s) that aren't visible on the page.",
+    "placeholders": { "count": { "content": "$1" } }
+  },
+  "errorNoTab": { "message": "Could not find the active tab." },
+  "errorUnreadable": {
+    "message": "Chrome doesn't allow extensions to read this page (for example chrome:// pages, the Chrome Web Store or the PDF viewer)."
+  },
+  "errorTooLarge": {
+    "message": "This page is too large to convert in one go. Select the part you need and open Web2MD again."
+  },
+  "errorNoContent": {
+    "message": "No readable content found on this page. Try selecting the text you want first."
+  }
+}

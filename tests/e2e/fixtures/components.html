@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Web components page</title>
+  </head>
+  <body>
+    <nav>NAV MENU</nav>
+    <main>
+      <h1>Components</h1>
+      <p>Light DOM paragraph.</p>
+      <story-card><span slot="title">SLOTTED TITLE</span></story-card>
+      <iframe src="frames/inner.html" title="Embedded notes"></iframe>
+    </main>
+    <script>
+      customElements.define(
+        'story-card',
+        class extends HTMLElement {
+          constructor() {
+            super();
+            this.attachShadow({ mode: 'open' }).innerHTML = `
+              <style>.sr { position: absolute; width: 1px; height: 1px; overflow: hidden; }</style>
+              <h2><slot name="title"></slot></h2>
+              <p>SHADOW TEXT with <strong>bold</strong>.</p>
+              <span class="sr">SHADOW INJECTION</span>`;
+          }
+        },
+      );
+    </script>
+  </body>
+</html>

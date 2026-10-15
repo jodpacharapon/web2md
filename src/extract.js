@@ -3,6 +3,10 @@
 // function. `lib/Readability.js` is injected first, so `globalThis.Readability`
 // is available when the user asked for clean-up.
 //
+// Same-origin iframes and open shadow roots are included as if they were part
+// of the page. Cross-origin iframes can't be read (activeTab only covers the
+// page's own origin) and closed shadow roots are private by design.
+//
 // Returns the HTML to convert plus page info:
 //   { title, url, baseUrl, mode: 'selection' | 'article' | 'page', html, hiddenRemoved }
 export function extractPage(options = {}) {
@@ -45,7 +49,9 @@ export function extractPage(options = {}) {
 
   const isHidden = (el) => {
     if (el.hidden || el.getAttribute('aria-hidden') === 'true') return true;
-    const cs = getComputedStyle(el);
+    // Elements inside an iframe are styled by the iframe's own window.
+    const view = (el.ownerDocument && el.ownerDocument.defaultView) || window;
+    const cs = view.getComputedStyle(el);
     if (cs.display === 'none' || cs.visibility === 'hidden' || cs.visibility === 'collapse') return true;
     if (cs.contentVisibility === 'hidden') return true;
     if (cs.opacity !== '' && Number(cs.opacity) < 0.05) return true;
@@ -73,9 +79,24 @@ export function extractPage(options = {}) {
     return false;
   };
 
+  // The document inside a same-origin <iframe>, or null (cross-origin, empty).
+  const frameDocument = (el) => {
+    if (!/^I?FRAME$/.test(el.nodeName)) return null;
+    try {
+      const doc = el.contentDocument;
+      return doc && doc.body ? doc : null;
+    } catch {
+      return null;
+    }
+  };
+
   const tagged = [];
-  const tagHidden = () => {
-    const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_ELEMENT, {
+  const frameDocs = [];
+  // Set when the page has open shadow roots or readable iframes: a plain
+  // cloneNode() would miss their content, so we build a "composed" copy instead.
+  let composed = false;
+  const tagHidden = (root) => {
+    const walker = document.createTreeWalker(root, NodeFilter.SHOW_ELEMENT, {
       acceptNode(el) {
         // Don't look inside things we drop anyway, or inside hidden subtrees.
         if (/^(SCRIPT|STYLE|NOSCRIPT|TEMPLATE|SVG)$/i.test(el.nodeName)) return NodeFilter.FILTER_REJECT;
@@ -84,10 +105,77 @@ export function extractPage(options = {}) {
           tagged.push(el);
           return NodeFilter.FILTER_REJECT;
         }
+        if (el.shadowRoot) {
+          composed = true;
+          tagHidden(el.shadowRoot);
+        }
+        const doc = frameDocument(el);
+        if (doc) {
+          composed = true;
+          frameDocs.push(doc);
+          tagHidden(doc.body);
+        }
         return NodeFilter.FILTER_ACCEPT;
       },
     });
     while (walker.nextNode());
+  };
+
+  // Copy a subtree the way it's rendered: shadow roots instead of light DOM,
+  // <slot>s replaced by what's assigned to them, readable iframes inlined.
+  // Hidden elements are left out. URLs inside iframes are made absolute here,
+  // because the iframe's base URL differs from the page's.
+  const URL_ATTRS = ['href', 'src', 'data-src', 'data-lazy-src', 'data-original'];
+  const composedClone = (node, fromFrame = false) => {
+    if (node.nodeType === 3) return document.createTextNode(node.data);
+    if (node.nodeType !== 1 || node.hasAttribute(HIDDEN_ATTR)) return null;
+    const frameDoc = frameDocument(node);
+    if (frameDoc) {
+      const holder = document.createElement('div');
+      for (const child of frameDoc.body.childNodes) {
+        const copy = composedClone(child, true);
+        if (copy) holder.appendChild(copy);
+      }
+      return holder;
+    }
+    if (node.nodeName === 'SLOT' && typeof node.assignedNodes === 'function') {
+      const assigned = node.assignedNodes({ flatten: true });
+      const holder = document.createDocumentFragment();
+      for (const child of assigned.length ? assigned : node.childNodes) {
+        const copy = composedClone(child, fromFrame);
+        if (copy) holder.appendChild(copy);
+      }
+      return holder;
+    }
+    const copy = document.importNode(node, false);
+    if (fromFrame) {
+      for (const attr of URL_ATTRS) {
+        const value = node.getAttribute(attr);
+        if (!value || value.startsWith('#')) continue;
+        try {
+          copy.setAttribute(attr, new URL(value, node.baseURI).href);
+        } catch {
+          // Leave it; convert.js drops URLs it can't parse.
+        }
+      }
+    }
+    for (const child of (node.shadowRoot || node).childNodes) {
+      const childCopy = composedClone(child, fromFrame);
+      if (childCopy) copy.appendChild(childCopy);
+    }
+    return copy;
+  };
+
+  const cloneDocument = () => {
+    if (!composed) return document.cloneNode(true);
+    const doc = document.implementation.createHTMLDocument('');
+    doc.documentElement.replaceChild(doc.importNode(document.head, true), doc.head);
+    // Readability resolves links against the document's base URL.
+    const base = doc.createElement('base');
+    base.setAttribute('href', document.baseURI);
+    doc.head.prepend(base);
+    doc.documentElement.replaceChild(doc.importNode(composedClone(document.body), true), doc.body);
+    return doc;
   };
 
   const NOISE = 'script, style, noscript, template, iframe, object, embed, svg, canvas, button, input, select, textarea';
@@ -95,7 +183,7 @@ export function extractPage(options = {}) {
   const strip = (root, selector) => root.querySelectorAll(selector).forEach((n) => n.remove());
 
   try {
-    if (document.body) tagHidden();
+    if (document.body) tagHidden(document.body);
 
     // The page title often ends in " | Site name". Prefer the visible <h1>
     // when the page title contains it (true for most articles).
@@ -114,8 +202,11 @@ export function extractPage(options = {}) {
     };
 
     // --- 2. The user's selection wins --------------------------------------
-    const selection = window.getSelection();
-    if (selection && !selection.isCollapsed && selection.rangeCount > 0) {
+    // A selection inside a same-origin iframe counts too.
+    const selection = [window, ...frameDocs.map((d) => d.defaultView)]
+      .map((w) => w && w.getSelection())
+      .find((sel) => sel && !sel.isCollapsed && sel.rangeCount > 0);
+    if (selection) {
       const holder = document.createElement('div');
       for (let i = 0; i < selection.rangeCount; i++) {
         holder.appendChild(selection.getRangeAt(i).cloneContents());
@@ -128,7 +219,7 @@ export function extractPage(options = {}) {
 
     // --- 3. Main article via Readability (Firefox Reader View) -------------
     if (cleanup && typeof globalThis.Readability === 'function') {
-      const doc = document.cloneNode(true);
+      const doc = cloneDocument();
       strip(doc, `[${HIDDEN_ATTR}]`);
       try {
         // keepClasses: code blocks carry their language in class="language-js".
@@ -147,7 +238,7 @@ export function extractPage(options = {}) {
 
     // --- 4. Fallback: <article>/<main>/<body> minus site chrome ------------
     const main = document.querySelector('article') || document.querySelector('main') || document.querySelector('[role="main"]');
-    const root = (main || document.body).cloneNode(true);
+    const root = composed ? composedClone(main || document.body) : (main || document.body).cloneNode(true);
     strip(root, `[${HIDDEN_ATTR}], ${NOISE}`);
     if (cleanup) {
       strip(root, CHROME);

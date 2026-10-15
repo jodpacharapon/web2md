@@ -1,0 +1,48 @@
+{
+  "extName": { "message": "Web2MD – คัดลอกหน้าเว็บเป็น Markdown" },
+  "extDescription": {
+    "message": "แปลงหน้าเว็บหรือข้อความที่เลือกเป็น Markdown ที่อ่านง่าย แล้วคัดลอกไปวางในแชต AI ได้ทันที"
+  },
+  "actionTitle": { "message": "คัดลอกหน้าเว็บเป็น Markdown (Alt+Shift+M)" },
+  "commandOpen": { "message": "เปิด Web2MD" },
+  "contextMenuCopySelection": { "message": "คัดลอกส่วนที่เลือกเป็น Markdown" },
+
+  "modeSelection": { "message": "เฉพาะส่วนที่เลือก" },
+  "modeArticle": { "message": "เนื้อหาหลัก" },
+  "modePage": { "message": "ทั้งหน้า" },
+
+  "outputLabel": { "message": "ผลลัพธ์ Markdown" },
+  "converting": { "message": "กำลังแปลง…" },
+  "optIncludeHeader": { "message": "ใส่ชื่อเรื่องและ URL ต้นทาง" },
+  "optCleanup": { "message": "เฉพาะเนื้อหาหลัก (ตัดเมนู โฆษณา คอมเมนต์)" },
+  "optIncludeImages": { "message": "เก็บรูปภาพไว้" },
+  "downloadButton": { "message": "ดาวน์โหลด .md" },
+  "downloadTooltip": { "message": "บันทึกเป็นไฟล์ .md" },
+  "copyButton": { "message": "คัดลอก Markdown" },
+  "copyTooltip": { "message": "คัดลอก (Enter)" },
+
+  "stats": {
+    "message": "$CHARS$ ตัวอักษร · ~$TOKENS$ token",
+    "placeholders": { "chars": { "content": "$1" }, "tokens": { "content": "$2" } }
+  },
+  "copied": { "message": "คัดลอกแล้ว! นำไปวางในแชต AI ได้เลย" },
+  "copyFailed": { "message": "คัดลอกอัตโนมัติไม่สำเร็จ กด Enter เพื่อคัดลอก" },
+  "saved": {
+    "message": "บันทึก $FILE$ แล้ว",
+    "placeholders": { "file": { "content": "$1" } }
+  },
+  "skippedHidden": {
+    "message": "ข้ามข้อความที่ซ่อนอยู่ $COUNT$ ส่วน ซึ่งมองไม่เห็นบนหน้าเว็บ",
+    "placeholders": { "count": { "content": "$1" } }
+  },
+  "errorNoTab": { "message": "ไม่พบแท็บที่เปิดอยู่" },
+  "errorUnreadable": {
+    "message": "Chrome ไม่อนุญาตให้ extension อ่านหน้านี้ (เช่น หน้า chrome:// หน้า Chrome Web Store หรือตัวเปิด PDF)"
+  },
+  "errorTooLarge": {
+    "message": "หน้านี้ใหญ่เกินกว่าจะแปลงทีเดียว ลองไฮไลต์เฉพาะส่วนที่ต้องการแล้วเปิด Web2MD อีกครั้ง"
+  },
+  "errorNoContent": {
+    "message": "ไม่พบเนื้อหาที่อ่านได้ในหน้านี้ ลองไฮไลต์ข้อความที่ต้องการก่อน"
+  }
+}

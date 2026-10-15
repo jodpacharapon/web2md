@@ -147,3 +147,54 @@ test('selection mode also prefers the visible <h1> over "Title | Site name"', ()
   assert.equal(r.mode, 'selection');
   assert.equal(r.title, 'Real Title');
 });
+
+test('includes open shadow DOM content, with slotted text in place and hidden parts dropped', () => {
+  const dom = load('<body><main><p>Before</p><my-card><span slot="title">SLOTTED TITLE</span></my-card><p>After</p></main></body>');
+  const host = dom.window.document.querySelector('my-card');
+  const shadow = host.attachShadow({ mode: 'open' });
+  shadow.innerHTML = `<style>p { color: red }</style><h2><slot name="title">fallback</slot></h2>
+    <p>SHADOW BODY</p><p style="display:none">SHADOW INJECT</p><slot name="empty">SLOT FALLBACK</slot>`;
+  const r = extractPage({ cleanup: false });
+  const order = ['Before', 'SLOTTED TITLE', 'SHADOW BODY', 'SLOT FALLBACK', 'After'].map((s) => r.html.indexOf(s));
+  assert.ok(order.every((i) => i >= 0), r.html);
+  assert.deepEqual(order, [...order].sort((a, b) => a - b), 'content out of order');
+  assert.ok(!r.html.includes('SHADOW INJECT'));
+  assert.ok(!r.html.includes('fallback<'), 'slot fallback shown although the slot has content');
+  assert.equal(r.hiddenRemoved, 1);
+  assert.equal(shadow.querySelectorAll('[data-web2md-hidden]').length, 0, 'markers left in the shadow root');
+});
+
+test('shadow DOM content reaches Readability too', () => {
+  const dom = load(`<!doctype html><title>Post</title><body><nav>MENU</nav><article-view></article-view></body>`);
+  const shadow = dom.window.document.querySelector('article-view').attachShadow({ mode: 'open' });
+  shadow.innerHTML = `<article><h1>Title</h1><p>${longText}</p><p>SHADOW ARTICLE <a href="/rel">link</a> ${longText}</p></article>`;
+  const r = extractPage({ cleanup: true });
+  assert.equal(r.mode, 'article');
+  assert.match(r.html, /SHADOW ARTICLE/);
+  assert.match(r.html, /href="https:\/\/example\.com\/rel"/);
+  assert.ok(!r.html.includes('MENU'));
+});
+
+test('inlines same-origin iframes and drops their hidden text', () => {
+  const dom = load('<body><main><p>Outside</p><iframe></iframe></main></body>');
+  const frameDoc = dom.window.document.querySelector('iframe').contentDocument;
+  frameDoc.body.innerHTML = '<p>INSIDE FRAME</p><p style="display:none">FRAME INJECT</p>';
+  const r = extractPage({ cleanup: false });
+  assert.match(r.html, /INSIDE FRAME/);
+  assert.ok(!r.html.includes('FRAME INJECT'));
+  assert.equal(r.hiddenRemoved, 1);
+  assert.equal(frameDoc.querySelectorAll('[data-web2md-hidden]').length, 0);
+});
+
+test('a selection inside a same-origin iframe is used', () => {
+  const dom = load('<body><main><p>Outside</p><iframe></iframe></main></body>');
+  const frame = dom.window.document.querySelector('iframe');
+  frame.contentDocument.body.innerHTML = '<p id="x">PICKED IN FRAME</p><p>not picked</p>';
+  const range = frame.contentDocument.createRange();
+  range.selectNodeContents(frame.contentDocument.getElementById('x'));
+  frame.contentWindow.getSelection().addRange(range);
+  const r = extractPage({ cleanup: true });
+  assert.equal(r.mode, 'selection');
+  assert.match(r.html, /PICKED IN FRAME/);
+  assert.ok(!r.html.includes('not picked'));
+});

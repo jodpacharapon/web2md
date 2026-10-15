@@ -12,8 +12,8 @@ import zlib from 'node:zlib';
 import { fileURLToPath } from 'node:url';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const INCLUDE = ['manifest.json', 'popup', 'src', 'lib', 'icons'];
-const ALLOWED_PERMISSIONS = ['activeTab', 'scripting', 'storage'];
+const INCLUDE = ['manifest.json', '_locales', 'popup', 'src', 'lib', 'icons'];
+const ALLOWED_PERMISSIONS = ['activeTab', 'contextMenus', 'scripting', 'storage'];
 const ALLOWED_EXT = new Set(['.json', '.html', '.css', '.js', '.png', '.md', '.txt']);
 
 const problems = [];
@@ -39,6 +39,11 @@ if (manifest.optional_host_permissions?.length) fail('optional_host_permissions 
 if (manifest.content_scripts?.length) fail('content_scripts are not expected (we inject on click only)');
 if (manifest.web_accessible_resources?.length) fail('web_accessible_resources would let web pages load extension files');
 if (manifest.externally_connectable) fail('externally_connectable would let web pages message the extension');
+const worker = manifest.background?.service_worker;
+if (manifest.background && worker !== 'src/background.js') {
+  fail(`unexpected background ${JSON.stringify(manifest.background)} (only src/background.js, for the right-click menu)`);
+}
+if (worker && !files.includes(worker)) fail(`background service worker ${worker} is not in the package`);
 for (const p of manifest.permissions || []) {
   if (!ALLOWED_PERMISSIONS.includes(p)) fail(`unexpected permission "${p}" (update ALLOWED_PERMISSIONS on purpose if needed)`);
 }
