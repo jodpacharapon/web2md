@@ -17,7 +17,7 @@ const HOST = 'notebook-daily.example';
 
 // Temporary copy with host permissions: automation can't click the toolbar icon.
 const extDir = fs.mkdtempSync(path.join(os.tmpdir(), 'web2md-ext-'));
-for (const item of ['manifest.json', 'popup', 'src', 'lib', 'icons']) {
+for (const item of ['manifest.json', '_locales', 'popup', 'src', 'lib', 'icons']) {
   fs.cpSync(path.join(root, item), path.join(extDir, item), { recursive: true });
 }
 const manifest = JSON.parse(fs.readFileSync(path.join(extDir, 'manifest.json'), 'utf8'));

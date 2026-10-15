@@ -1,13 +1,13 @@
 import { extractPage } from '../src/extract.js';
 import { htmlToMarkdown, estimateTokens, fileNameFor } from '../src/convert.js';
 import { loadSettings, saveSettings } from '../src/settings.js';
+import { t, localize } from '../src/i18n.js';
+import { takeAutoCopyRequest } from '../src/menu.js';
 
-const MODE_LABELS = { selection: 'Selection only', article: 'Main content', page: 'Whole page' };
+const MODE_LABELS = { selection: 'modeSelection', article: 'modeArticle', page: 'modePage' };
 // Beyond this the conversion can freeze the popup for a long time (and the
 // result is too big for an AI chat anyway).
 const MAX_HTML_CHARS = 3_000_000;
-const UNREADABLE_PAGE =
-  "Chrome doesn't allow extensions to read this page (for example chrome:// pages, the Chrome Web Store or the PDF viewer).";
 
 const $ = (id) => document.getElementById(id);
 const ui = {
@@ -37,7 +37,7 @@ function showMessage(text, { error = false } = {}) {
   ui.message.classList.toggle('error', error);
   ui.message.hidden = !text;
   // Don't leave "Converting…" showing next to an error.
-  ui.output.placeholder = error ? '' : 'Converting…';
+  ui.output.placeholder = error ? '' : t('converting');
 }
 
 function setBusy(busy) {
@@ -88,21 +88,19 @@ function render() {
 
   const chars = markdown.length;
   ui.stats.textContent = chars
-    ? `${chars.toLocaleString()} chars · ~${estimateTokens(markdown).toLocaleString()} tokens`
+    ? t('stats', [chars.toLocaleString(), estimateTokens(markdown).toLocaleString()])
     : '';
   ui.copy.disabled = chars === 0;
   ui.download.disabled = chars === 0;
 
   if (!chars) {
-    showMessage('No readable content found on this page. Try selecting the text you want first.', { error: true });
+    showMessage(t('errorNoContent'), { error: true });
   } else {
     ui.copy.focus(); // so Enter copies straight away
   }
 
   ui.notice.hidden = !page.hiddenRemoved;
-  ui.notice.textContent = page.hiddenRemoved
-    ? `Skipped ${page.hiddenRemoved.toLocaleString()} hidden element(s) that aren't visible on the page.`
-    : '';
+  ui.notice.textContent = page.hiddenRemoved ? t('skippedHidden', [page.hiddenRemoved.toLocaleString()]) : '';
 }
 
 async function extract() {
@@ -112,40 +110,47 @@ async function extract() {
 
   const tab = await targetTab().catch(() => null);
   if (!tab || tab.id === undefined) {
-    showMessage('Could not find the active tab.', { error: true });
+    showMessage(t('errorNoTab'), { error: true });
     return;
   }
 
   try {
     state.page = await extractFrom(tab.id, state.settings);
   } catch {
-    showMessage(UNREADABLE_PAGE, { error: true });
+    showMessage(t('errorUnreadable'), { error: true });
     return;
   }
 
   ui.mode.hidden = false;
-  ui.mode.textContent = MODE_LABELS[state.page.mode] || '';
+  ui.mode.textContent = MODE_LABELS[state.page.mode] ? t(MODE_LABELS[state.page.mode]) : '';
 
   if (typeof state.page.html !== 'string' || state.page.html.length > MAX_HTML_CHARS) {
     state.page = null;
-    showMessage('This page is too large to convert in one go. Select the part you need and open Web2MD again.', {
-      error: true,
-    });
+    showMessage(t('errorTooLarge'), { error: true });
     return;
   }
   render();
 }
 
+async function writeClipboard(text) {
+  try {
+    await navigator.clipboard.writeText(text);
+    return true;
+  } catch {
+    // Fallback if the async clipboard API is refused (e.g. the popup isn't focused yet).
+    ui.output.select();
+    return document.execCommand('copy');
+  }
+}
+
 async function copy() {
   if (ui.copy.disabled) return;
-  try {
-    await navigator.clipboard.writeText(ui.output.value);
-  } catch {
-    // Fallback if the async clipboard API is refused.
-    ui.output.select();
-    document.execCommand('copy');
+  if (await writeClipboard(ui.output.value)) {
+    showMessage(t('copied'));
+  } else {
+    showMessage(t('copyFailed'), { error: true });
+    ui.copy.focus();
   }
-  showMessage('Copied! Paste it into your AI chat.');
 }
 
 function download() {
@@ -160,7 +165,7 @@ function download() {
   link.click();
   link.remove();
   setTimeout(() => URL.revokeObjectURL(link.href), 1000);
-  showMessage(`Saved ${link.download}`);
+  showMessage(t('saved', [link.download]));
 }
 
 async function onOptionChange(key) {
@@ -172,6 +177,7 @@ async function onOptionChange(key) {
 }
 
 async function init() {
+  localize();
   state.settings = await loadSettings();
   for (const [key, input] of Object.entries(ui.options)) {
     input.checked = state.settings[key];
@@ -186,7 +192,11 @@ async function init() {
       copy();
     }
   });
+  // Opened from the right-click menu: copy as soon as the Markdown is ready.
+  const tab = await targetTab().catch(() => null);
+  const autoCopy = !!tab && (await takeAutoCopyRequest(tab.id));
   await extract();
+  if (autoCopy && !ui.copy.disabled) await copy();
 }
 
 init();

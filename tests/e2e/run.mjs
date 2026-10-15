@@ -22,7 +22,7 @@ fs.mkdirSync(shots, { recursive: true });
 
 // 1. Temporary copy of the extension with host permissions for automation.
 const extDir = fs.mkdtempSync(path.join(os.tmpdir(), 'web2md-ext-'));
-for (const item of ['manifest.json', 'popup', 'src', 'lib', 'icons']) {
+for (const item of ['manifest.json', '_locales', 'popup', 'src', 'lib', 'icons']) {
   fs.cpSync(path.join(root, item), path.join(extDir, item), { recursive: true });
 }
 const manifest = JSON.parse(fs.readFileSync(path.join(extDir, 'manifest.json'), 'utf8'));
@@ -114,9 +114,12 @@ await popup.screenshot({ path: path.join(shots, '2-popup-whole-page.png') });
 await check('whole page: badge says "Main content" (Readability)', async () =>
   assert.equal(await popup.textContent('#mode'), 'Main content'));
 await check('whole page: hidden prompt-injection text is skipped', async () => {
-  assert.ok(!/INJECTION|IGNORE PREVIOUS/.test(md), 'hidden text leaked into the Markdown');
+  const leaked = md.match(/[A-Z-]+ INJECTION|IGNORE PREVIOUS/g);
+  assert.ok(!leaked, `hidden text leaked into the Markdown: ${leaked}`);
   assert.match(await popup.textContent('#notice'), /Skipped \d+ hidden element/);
 });
+await check('whole page: gradient text (transparent colour + background-clip) is kept', () =>
+  assert.match(md, /GRADIENT HEADING/));
 await check('page itself is left untouched (no marker attributes)', async () =>
   assert.equal(await page.evaluate(() => document.querySelectorAll('[data-web2md-hidden]').length), 0));
 await check('whole page: Thai heading kept', () => assert.match(md, /^# วิธีใช้ Markdown กับ AI$/m));
@@ -226,6 +229,94 @@ await check('cleanup off: menus are kept', async () => {
 });
 await plainPopup.close();
 await plain.close();
+
+// With clean-up off, Readability can't be what removes the hidden text:
+// the hidden-text guard alone has to catch every trick.
+const raw = await context.newPage();
+await raw.goto(`${base}/blog.html?tab=raw`);
+const rawPopup = await openPopupFor(raw, { cleanup: false });
+await check('cleanup off: hidden-text guard alone skips every hiding trick', async () => {
+  await rawPopup.waitForFunction(() => document.getElementById('mode').textContent === 'Whole page', null, { timeout: 5000 });
+  const rawMd = await rawPopup.inputValue('#output');
+  const leaked = rawMd.match(/[A-Z-]+ INJECTION|IGNORE PREVIOUS/g);
+  assert.ok(!leaked, `hidden text leaked into the Markdown: ${leaked}`);
+  assert.match(rawMd, /GRADIENT HEADING/);
+});
+await rawPopup.close();
+await raw.close();
+
+// --- Scenario 5b: shadow DOM and same-origin iframes -------------------------
+const comp = await context.newPage();
+await comp.goto(`${base}/components.html`);
+await comp.waitForFunction(() => document.querySelector('iframe').contentDocument?.body?.textContent.includes('FRAME TEXT'));
+const compPopup = await openPopupFor(comp, { cleanup: false });
+const compMd = await compPopup.inputValue('#output');
+fs.writeFileSync(path.join(shots, 'components.md'), compMd);
+await check('shadow DOM: shadow content and slotted text included, in order', () => {
+  assert.match(compMd, /^## SLOTTED TITLE\n\nSHADOW TEXT with \*\*bold\*\*\.$/m);
+  assert.ok(compMd.indexOf('Light DOM') < compMd.indexOf('SLOTTED TITLE'));
+});
+await check('iframe: same-origin frame inlined, its relative link resolved against the frame', () =>
+  assert.match(compMd, new RegExp(`FRAME TEXT with a \\[frame link\\]\\(${base}/frames/docs/frame-guide\\.html\\)`)));
+await check('shadow DOM / iframe: hidden text inside them is skipped', () => {
+  const leaked = compMd.match(/[A-Z-]+ INJECTION/g);
+  assert.ok(!leaked, `hidden text leaked: ${leaked}`);
+});
+await compPopup.close();
+await comp.close();
+
+// --- Scenario 5c: right-click "Copy selection as Markdown" -------------------
+// Automation can't open Chrome's native menu, so call the service worker's
+// click handler directly with what Chrome would pass it.
+const menuPage = await context.newPage();
+await menuPage.goto(`${base}/blog.html?tab=menu`);
+await menuPage.evaluate(() => {
+  const range = document.createRange();
+  range.selectNodeContents(document.querySelector('ul'));
+  getSelection().removeAllRanges();
+  getSelection().addRange(range);
+});
+await check('right-click menu: copies the selection as Markdown and shows it', async () => {
+  const tabId = await tabIdOf(menuPage);
+  const worker = context.serviceWorkers().find((w) => w.url().includes(extId)) ?? (await context.waitForEvent('serviceworker'));
+  // Playwright doesn't expose the real popup as a page, so read it from another
+  // extension page (same extension process) with chrome.extension.getViews.
+  const helper = await context.newPage();
+  await helper.goto(`chrome-extension://${extId}/popup/popup.html?tabId=${tabId}`);
+  await helper.evaluate(() => navigator.clipboard.writeText(''));
+  await menuPage.bringToFront(); // the clicked tab is the active one, as in real use
+  await worker.evaluate(async (tabId) => {
+    const tab = await chrome.tabs.get(tabId);
+    await globalThis.web2mdOnMenuClick({ menuItemId: 'web2md-copy-selection', selectionText: '…' }, tab);
+  }, tabId);
+  const popupState = () =>
+    helper.evaluate(() => {
+      const [view] = chrome.extension.getViews({ type: 'popup' });
+      const $ = (id) => view && view.document.getElementById(id);
+      return view && !$('message').hidden
+        ? { output: $('output').value, mode: $('mode').textContent, message: $('message').textContent }
+        : null;
+    });
+  let state = null;
+  for (let i = 0; i < 50 && !state; i++) {
+    state = await popupState();
+    if (!state) await helper.waitForTimeout(200);
+  }
+  assert.ok(state, 'popup did not open or did not finish');
+  assert.equal(state.mode, 'Selection only');
+  assert.match(state.output, /^- หัวข้อชัดเจน$/m);
+  assert.ok(!state.output.includes('ตัวอย่างโค้ด'), 'contains text outside the selection');
+  assert.equal(state.message, 'Copied! Paste it into your AI chat.');
+  await helper.bringToFront(); // reading the clipboard needs a focused page
+  assert.equal(await helper.evaluate(() => navigator.clipboard.readText()), state.output);
+  await helper.close();
+});
+await check('right-click menu: an ordinary popup opening does not auto-copy', async () => {
+  const normal = await openPopupFor(menuPage);
+  assert.ok(await normal.isHidden('#message'), 'popup copied without being asked');
+  await normal.close();
+});
+await menuPage.close();
 
 // --- Scenario 6: pages Chrome won't let extensions read --------------------
 const blocked = await context.newPage();

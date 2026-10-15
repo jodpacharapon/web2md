@@ -4,7 +4,7 @@
 
 Please open a GitHub issue, or for anything sensitive contact the maintainer privately through GitHub before posting details publicly.
 
-## Security review (v0.2.0)
+## Security review (v0.3.0)
 
 Reviewed before the first public release. Most checks run automatically in `npm run build` and the test suites.
 
@@ -12,11 +12,14 @@ Reviewed before the first public release. Most checks run automatically in `npm 
 
 | Permission | Install warning | Why |
 | --- | --- | --- |
-| `activeTab` | none | Read only the tab you clicked the icon on, only at that moment |
+| `activeTab` | none | Read only the tab you clicked the icon (or the right-click menu item) on, only at that moment |
+| `contextMenus` | none | The **Copy selection as Markdown** menu item |
 | `scripting` | none (with activeTab only) | Run the extractor in that tab |
 | `storage` | none | Remember the three options |
 
-No host permissions, no `tabs`, no `clipboardWrite` (removed: copying from the popup works without it), no content scripts, no background worker, no `web_accessible_resources`, no `externally_connectable`. `npm run build` refuses to package anything else.
+No host permissions, no `tabs`, no `clipboardWrite` (copying from the popup works without it, including after the right-click menu), no content scripts, no `web_accessible_resources`, no `externally_connectable`. `npm run build` refuses to package anything else.
+
+The only background code is `src/background.js`, which registers the right-click menu and, when it's clicked, opens the popup. It never reads pages. The hand-off to the popup ("copy as soon as you're ready") uses `chrome.storage.session` (memory only, extension pages only) and expires after 15 seconds. The build fails if any other background script is declared.
 
 ### No data leaves the browser
 
@@ -30,11 +33,13 @@ The page is hostile input. How it's handled:
 | --- | --- | --- |
 | Script in the page running in the popup | Page HTML is parsed with `DOMParser` (inert: no scripts, no event handlers, no image loads). The popup never uses `innerHTML`; output goes into a `<textarea>` as text | `convert.test.mjs` "never executed" |
 | Strict CSP for extension pages | `script-src 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'`. Build check rejects `unsafe-*`, inline scripts and inline handlers | `npm run build` |
-| **Prompt injection via hidden text** (e.g. `display:none` "ignore previous instructions…") pasted into an AI | Elements that aren't visible are removed before conversion: `display:none`, `visibility:hidden`, opacity 0, font-size 0, far off-screen, `hidden`, `aria-hidden`. The popup tells the user how many were skipped | `extract.test.mjs`, e2e |
+| **Prompt injection via hidden text** (e.g. `display:none` "ignore previous instructions…") pasted into an AI | Elements that aren't visible are removed before conversion: `display:none`, `visibility:hidden`, `content-visibility:hidden`, near-zero opacity, font-size ≤ 1px, far off-screen (position, `text-indent`, `translate`), `scale(0)`, `clip`/`clip-path` that leaves nothing (the `.sr-only` pattern), 1px boxes with hidden overflow, transparent text (gradient text is kept), `hidden`, `aria-hidden`. The popup tells the user how many were skipped | `extract.test.mjs`, e2e (with and without clean-up) |
+| Text coloured the same as its background, or covered by another element | Not detected: it would need full colour and layout analysis. Users should review before pasting | – |
 | Visible prompt-injection text | Cannot be detected reliably; it is visible to the user too. Users should review before pasting (the popup shows the full text) | – |
 | `javascript:` / `data:` / `vbscript:` links | Turned into plain text; only `http`, `https`, `mailto`, `ftp` links are kept | `convert.test.mjs` |
 | Huge base64 `data:` images | Dropped | `convert.test.mjs` |
 | Page leaves markers behind | Temporary `data-web2md-hidden` attributes are removed in a `finally` block | `extract.test.mjs`, e2e |
+| Iframes and shadow DOM | Only same-origin iframes and open shadow roots are read (cross-origin iframes such as ads are out of reach of `activeTab`). The hidden-text guard runs inside them too, and links in an iframe are resolved against the iframe's own URL | `extract.test.mjs`, e2e |
 | Very large pages freezing the popup | HTML over 3M characters is refused with a message to select part of the page | – |
 | Markdown-breaking URLs | `(`, `)` and spaces are percent-encoded | `convert.test.mjs` |
 | Unsafe file names on Download | Characters not allowed on Windows/macOS are stripped | `convert.test.mjs` |

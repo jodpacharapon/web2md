@@ -8,18 +8,18 @@ Images: run `npm run store-assets` → `store-assets/screenshot-1.png … 3.png`
 
 ## Store listing tab
 
-**Name** (from manifest, max 75)
+**Name** (from `_locales/en/messages.json`, max 75)
 ```
 Web2MD – Copy page as Markdown
 ```
 
-**Summary** (from manifest `description`, max 132)
+**Summary** (from `_locales/en/messages.json` `extDescription`, max 132)
 ```
 Convert the current page or your selection to clean Markdown and copy it, ready to paste into an AI chat.
 ```
 
 **Category**: Productivity → Tools
-**Language**: English (the Thai text below is part of the same description; a separate Thai listing needs a Thai UI first – see ROADMAP P1)
+**Language**: English. The extension now has a Thai UI, so you can also add a **Thai** listing in the Dashboard: the Thai name and summary come from `_locales/th/messages.json` automatically; use the Thai text below as its description.
 
 **Description**
 ```
@@ -29,12 +29,16 @@ Copying a whole page usually drags along menus, ads, cookie banners and comments
 
 HOW IT WORKS
 • Click the Web2MD icon (or press Alt+Shift+M)
+• Or highlight text, right-click → Copy selection as Markdown
 • Check the Markdown in the preview and edit it if you like
 • Press Enter to copy – or Download as a .md file
 
 FEATURES
 • Main content only – finds the article with Mozilla Readability, the engine behind Firefox Reader View
 • Selection mode – highlight text first to convert just that part
+• Right-click menu – copy a selection as Markdown in one click
+• English and Thai interface
+• Reads web components and same-site embedded frames too
 • Keeps headings, lists, tables, code (with language), quotes, links and images
 • Hidden-text guard – skips invisible text, a trick used to slip hidden instructions to AI
 • Optional title + source URL header, optional images
@@ -53,6 +57,8 @@ PRIVATE BY DESIGN
 
 • กดไอคอน หรือ Alt+Shift+M แล้วกด Enter เพื่อคัดลอก
 • ไฮไลต์ข้อความก่อน เพื่อแปลงเฉพาะส่วนที่ต้องการ
+• หรือไฮไลต์แล้วคลิกขวา → "คัดลอกส่วนที่เลือกเป็น Markdown" คัดลอกได้ในคลิกเดียว
+• หน้าจอภาษาไทยและอังกฤษ
 • ข้ามข้อความที่ซ่อนไว้ ป้องกันคำสั่งแอบแฝงถึง AI
 • ทำงานในเบราว์เซอร์ทั้งหมด ไม่ส่งข้อมูลออกไปไหน
 ```
@@ -73,7 +79,12 @@ Web2MD converts the content of the current web page, or the user's text selectio
 
 `activeTab`
 ```
-Gives temporary access to the tab the user clicks the extension on, so its content can be converted to Markdown. No access to any other tab.
+Gives temporary access to the tab the user clicks the extension (or its right-click menu item) on, so its content can be converted to Markdown. No access to any other tab.
+```
+
+`contextMenus`
+```
+Adds one right-click menu item, "Copy selection as Markdown", shown only when text is selected. Choosing it opens the extension's popup, which converts and copies the selection.
 ```
 
 `scripting`

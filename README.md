@@ -8,6 +8,9 @@ A Chrome extension that turns the page you're reading (or just the text you've s
 
 - **Main content only**: finds the article with Mozilla Readability (the engine behind Firefox Reader View), dropping menus, ads, comments and footers
 - **Selection mode**: highlight text first to convert only that part
+- **Right-click menu**: highlight text, right-click, **Copy selection as Markdown**, and it's on your clipboard
+- **English and Thai UI**, picked automatically from your Chrome language
+- Reads content inside **same-origin iframes and web components** (shadow DOM) too
 - **Preview and edit** the Markdown before copying, or **download** it as a `.md` file
 - Keeps headings, lists, links, code blocks (with language), tables and quotes
 - Absolute links and images; lazy-loaded images resolved; options to drop images or the title/URL header
@@ -30,9 +33,14 @@ After pulling changes, click the reload icon on the Web2MD card in `chrome://ext
 ```
 manifest.json        Manifest V3 definition
 popup/               Popup UI (HTML, CSS, JS)
-src/extract.js       Runs inside the page: selection / Readability / fallback, skips hidden text
+src/extract.js       Runs inside the page: selection / Readability / fallback, skips hidden text,
+                     includes shadow DOM and same-origin iframes
 src/convert.js       HTML → Markdown (Turndown + GFM), safe links/images, whitespace clean-up
 src/settings.js      Remembered options (chrome.storage.sync)
+src/i18n.js          UI text from _locales/ (English, Thai)
+src/background.js    Service worker for the right-click menu only
+src/menu.js          Right-click menu → popup hand-off (copy straight away)
+_locales/            English and Thai text
 lib/                 Bundled third-party libraries + licenses (MV3 forbids remote code)
 icons/               Extension icons
 scripts/vendor.mjs   Copies libraries from node_modules into lib/
@@ -44,7 +52,8 @@ tests/               Unit tests; tests/e2e/ runs the real extension in Chromium
 
 | Permission | Why |
 | --- | --- |
-| `activeTab` | Read the current page only after you click the extension |
+| `activeTab` | Read the current page only after you click the extension or its menu item |
+| `contextMenus` | Add **Copy selection as Markdown** to the right-click menu |
 | `scripting` | Run the extractor in that page |
 | `storage` | Remember your options |
 
@@ -73,9 +82,10 @@ npm run vendor
 
 ## Publishing to the Chrome Web Store
 
-1. Bump `version` in `manifest.json` (and `package.json`)
+1. Bump `version` in `manifest.json` (and `package.json`) and add a section to [CHANGELOG.md](CHANGELOG.md)
 2. Run the checks in [SECURITY.md](SECURITY.md#before-every-release), then `npm run build`
-3. Upload `dist/web2md-<version>.zip` in the Chrome Web Store Developer Dashboard. Copy the listing and privacy answers from [STORE_LISTING.md](STORE_LISTING.md), add the images from `npm run store-assets`, then submit for review
+3. Optional: push a tag `v<version>` (e.g. `git tag v0.3.0 && git push origin v0.3.0`). GitHub Actions re-runs every check and publishes a GitHub Release with the zip attached
+4. Upload `dist/web2md-<version>.zip` (or the zip from the GitHub Release) in the Chrome Web Store Developer Dashboard. Copy the listing and privacy answers from [STORE_LISTING.md](STORE_LISTING.md), add the images from `npm run store-assets`, then submit for review
 
 What's next: [ROADMAP.md](ROADMAP.md).
 

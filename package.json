@@ -1,6 +1,6 @@
 {
   "name": "web2md",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Chrome extension that converts the current page (or selection) to Markdown and copies it for AI.",
   "private": true,
   "type": "module",
