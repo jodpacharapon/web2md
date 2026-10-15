@@ -23,6 +23,13 @@ Priorities for getting Web2MD from a working prototype to a public Chrome Web St
 | Size guard for huge pages | Popup no longer risks freezing |
 | `npm run build` with automatic release checks | Can't accidentally ship tests, host permissions, remote code or network calls |
 
+## Done after v0.2.0
+
+| Item | Why it mattered |
+| --- | --- |
+| Hidden-text guard also catches `.sr-only`-style clipping, 1px boxes, `text-indent`/`translate` off-screen, `scale(0)`, transparent text, tiny fonts, near-zero opacity, `content-visibility:hidden` | These are the most common ways to hide text, so they were open prompt-injection channels |
+| GitHub Actions CI (unit + e2e + build on every push and pull request) | Catches regressions before you test by hand |
+
 ## P0 – before publishing
 
 | Item | Owner | Notes |
@@ -37,7 +44,6 @@ Priorities for getting Web2MD from a working prototype to a public Chrome Web St
 | --- | --- |
 | Thai / English UI (`_locales`) | Most early users are likely Thai; Chrome picks the language automatically |
 | Right-click menu "Copy selection as Markdown" | Fastest path for partial copies; needs the `contextMenus` permission (no install warning) |
-| GitHub Actions CI (unit + e2e + build on every push) | Catches regressions before you test by hand |
 | Site-specific tweaks found during P0 testing | E.g. Blockdit, Pantip comment threads |
 | Content from iframes and shadow DOM | Some sites render articles inside these |
 

@@ -114,9 +114,12 @@ await popup.screenshot({ path: path.join(shots, '2-popup-whole-page.png') });
 await check('whole page: badge says "Main content" (Readability)', async () =>
   assert.equal(await popup.textContent('#mode'), 'Main content'));
 await check('whole page: hidden prompt-injection text is skipped', async () => {
-  assert.ok(!/INJECTION|IGNORE PREVIOUS/.test(md), 'hidden text leaked into the Markdown');
+  const leaked = md.match(/[A-Z-]+ INJECTION|IGNORE PREVIOUS/g);
+  assert.ok(!leaked, `hidden text leaked into the Markdown: ${leaked}`);
   assert.match(await popup.textContent('#notice'), /Skipped \d+ hidden element/);
 });
+await check('whole page: gradient text (transparent colour + background-clip) is kept', () =>
+  assert.match(md, /GRADIENT HEADING/));
 await check('page itself is left untouched (no marker attributes)', async () =>
   assert.equal(await page.evaluate(() => document.querySelectorAll('[data-web2md-hidden]').length), 0));
 await check('whole page: Thai heading kept', () => assert.match(md, /^# วิธีใช้ Markdown กับ AI$/m));
@@ -226,6 +229,21 @@ await check('cleanup off: menus are kept', async () => {
 });
 await plainPopup.close();
 await plain.close();
+
+// With clean-up off, Readability can't be what removes the hidden text:
+// the hidden-text guard alone has to catch every trick.
+const raw = await context.newPage();
+await raw.goto(`${base}/blog.html?tab=raw`);
+const rawPopup = await openPopupFor(raw, { cleanup: false });
+await check('cleanup off: hidden-text guard alone skips every hiding trick', async () => {
+  await rawPopup.waitForFunction(() => document.getElementById('mode').textContent === 'Whole page', null, { timeout: 5000 });
+  const rawMd = await rawPopup.inputValue('#output');
+  const leaked = rawMd.match(/[A-Z-]+ INJECTION|IGNORE PREVIOUS/g);
+  assert.ok(!leaked, `hidden text leaked into the Markdown: ${leaked}`);
+  assert.match(rawMd, /GRADIENT HEADING/);
+});
+await rawPopup.close();
+await raw.close();
 
 // --- Scenario 6: pages Chrome won't let extensions read --------------------
 const blocked = await context.newPage();

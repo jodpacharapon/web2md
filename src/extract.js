@@ -13,14 +13,61 @@ export function extractPage(options = {}) {
   // Hidden text is a prompt-injection channel ("ignore previous instructions…"
   // in a display:none div), so we drop it before anything is converted. We tag
   // the live elements, clone, then remove the tags again in `finally`.
+  const px = (value) => parseFloat(value);
+  const FAR_OFF = -2000;
+
+  // clip: rect(top, right, bottom, left) with no area left (".sr-only").
+  const clippedAway = (clip) => {
+    const m = /^rect\((.*)\)$/.exec(clip || '');
+    if (!m) return false;
+    const [top, right, bottom, left] = m[1].split(/[\s,]+/).map(px);
+    if ([top, right, bottom, left].some(Number.isNaN)) return false;
+    return right - left <= 1 || bottom - top <= 1;
+  };
+
+  // clip-path that leaves nothing: inset(50%) or more, circle(0), ellipse(0 0).
+  const clipPathAway = (clipPath) =>
+    /^inset\(\s*(5\d|[6-9]\d|100)(\.\d+)?%/.test(clipPath || '') ||
+    /^(circle|ellipse)\(\s*0(px|%)?[\s)]/.test(clipPath || '');
+
+  // transform that flattens the element (scale(0)) or moves it far away.
+  // Chrome reports a matrix(); declared values (e.g. in tests) may still read scale(0).
+  const transformedAway = (transform) => {
+    if (!transform || transform === 'none') return false;
+    if (/\bscale[XY]?\(\s*0[\s,)]/.test(transform)) return true;
+    const m = /^matrix\((.*)\)$/.exec(transform);
+    if (!m) return false;
+    const [a, b, c, d, e, f] = m[1].split(',').map(px);
+    return Math.abs(a * d - b * c) < 1e-6 || e < FAR_OFF || f < FAR_OFF;
+  };
+
+  const isTransparent = (color) => color === 'transparent' || /^rgba\(.*,\s*0(\.0+)?\)$/.test(color || '');
+
   const isHidden = (el) => {
     if (el.hidden || el.getAttribute('aria-hidden') === 'true') return true;
     const cs = getComputedStyle(el);
     if (cs.display === 'none' || cs.visibility === 'hidden' || cs.visibility === 'collapse') return true;
-    if (cs.opacity !== '' && Number(cs.opacity) === 0) return true;
-    if (parseFloat(cs.fontSize) === 0) return true;
+    if (cs.contentVisibility === 'hidden') return true;
+    if (cs.opacity !== '' && Number(cs.opacity) < 0.05) return true;
+    if (px(cs.fontSize) <= 1) return true;
     // Pushed far off-screen (a common hiding trick).
-    if ((cs.position === 'absolute' || cs.position === 'fixed') && (parseFloat(cs.left) < -2000 || parseFloat(cs.top) < -2000)) {
+    if ((cs.position === 'absolute' || cs.position === 'fixed') && (px(cs.left) < FAR_OFF || px(cs.top) < FAR_OFF)) {
+      return true;
+    }
+    if (px(cs.textIndent) < FAR_OFF / 2) return true;
+    if (transformedAway(cs.transform)) return true;
+    if (clippedAway(cs.clip) || clipPathAway(cs.clipPath)) return true;
+    // A box of 1px or less that cuts off its content (".sr-only", collapsed panels).
+    const clips = (overflow) => overflow === 'hidden' || overflow === 'clip';
+    if (clips(cs.overflowX || cs.overflow) && px(cs.width) <= 1) return true;
+    if (clips(cs.overflowY || cs.overflow) && px(cs.height) <= 1) return true;
+    // Transparent text, unless it's gradient text (background-clip: text) or has a shadow.
+    if (
+      isTransparent(cs.color) &&
+      cs.backgroundClip !== 'text' &&
+      cs.webkitBackgroundClip !== 'text' &&
+      (!cs.textShadow || cs.textShadow === 'none')
+    ) {
       return true;
     }
     return false;
